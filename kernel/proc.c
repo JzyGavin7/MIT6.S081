@@ -283,6 +283,11 @@ fork(void)
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
 
+  // copy trace mask
+  for(int i = 0; i < 31; i++){
+    np->trace[i] = p->trace[i];
+  }
+
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
     if(p->ofile[i])
