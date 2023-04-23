@@ -284,10 +284,8 @@ fork(void)
   np->trapframe->a0 = 0;
 
   // copy trace mask
-  for(int i = 0; i < 31; i++){
-    np->trace[i] = p->trace[i];
-  }
-
+  np->mask = p->mask;
+  
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
     if(p->ofile[i])
