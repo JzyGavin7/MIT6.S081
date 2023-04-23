@@ -33,6 +33,7 @@ void find(char *path, char *filename){
         return;
     }
 
+    // get filename from path
     f = fmtname(path);
     // printf("%d %s\n", strlen(f), f);
     if(strcmp(f, filename) == 0){
