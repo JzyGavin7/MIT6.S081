@@ -333,16 +333,20 @@ sfence_vma()
 #define PTE_U (1L << 4) // 1 -> user can access
 
 // shift a physical address to the right place for a PTE.
+// transform physical address to a PTE
 #define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)
 
+// The opposite of PA2PTE, transform a PTE to physical address
+// shift 10 bits right to remove 10 permisson bit, and shift 12 bits left(add 0s to lower 12 bits) to 
+// generate physical address of next level page-table
 #define PTE2PA(pte) (((pte) >> 10) << 12)
 
 #define PTE_FLAGS(pte) ((pte) & 0x3FF)
 
 // extract the three 9-bit page table indices from a virtual address.
 #define PXMASK          0x1FF // 9 bits
-#define PXSHIFT(level)  (PGSHIFT+(9*(level)))
-#define PX(level, va) ((((uint64) (va)) >> PXSHIFT(level)) & PXMASK)
+#define PXSHIFT(level)  (PGSHIFT+(9*(level)))  // PGSHIFT is 12 bit offset
+#define PX(level, va) ((((uint64) (va)) >> PXSHIFT(level)) & PXMASK) // If level==2, get 30~38 bit; if level == 1, get 21~29 bit
 
 // one beyond the highest possible virtual address.
 // MAXVA is actually one bit less than the max allowed by

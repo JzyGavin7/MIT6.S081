@@ -71,10 +71,17 @@ kvminithart()
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
+  // typedef uint64 *pagetable_t; Therefore, pagetable is a pointer that points to uint64. 
+  // In this case, pagetable is pointer to a RISC-V root page-table page.
   if(va >= MAXVA)
     panic("walk");
 
+  // if == 2, PX(level, va) is 30~38 bit
+  // Here, considering pagetable as a array name(int pointer), so page-table[i] is i-th element in page-table
   for(int level = 2; level > 0; level--) {
+    // *pte is PTE, and pte is pointer to PTE
+    // Here we must use pointer, since we are fetching something from an array
+    // If we use pte_t pte = pagetable[PX(level, va)], then we modify pte, but this change will not affect the element in the array
     pte_t *pte = &pagetable[PX(level, va)];
     if(*pte & PTE_V) {
       pagetable = (pagetable_t)PTE2PA(*pte);
@@ -82,7 +89,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
       memset(pagetable, 0, PGSIZE);
-      *pte = PA2PTE(pagetable) | PTE_V;
+      *pte = PA2PTE(pagetable) | PTE_V; // here we modify PTE
     }
   }
   return &pagetable[PX(0, va)];
