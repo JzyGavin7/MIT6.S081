@@ -285,7 +285,7 @@ fork(void)
 
   // copy trace mask
   np->mask = p->mask;
-  
+
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
     if(p->ofile[i])
@@ -695,4 +695,15 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+int
+countproc(void){
+  int count = 0;
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    if(p->state != UNUSED) count++;
+  }
+  return count;
 }
