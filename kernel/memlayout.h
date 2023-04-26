@@ -53,6 +53,10 @@
 
 // map kernel stacks beneath the trampoline,
 // each surrounded by invalid guard pages.
+// kernel stack of the first process is TRAMPOLINE - 2*PGSIZE
+// kernel stack of the second process is TRAMPOLINE - 4*PGSIZE
+// kernel stack is one page, and guard page is also one page
+// only kernel stack map to physical address
 #define KSTACK(p) (TRAMPOLINE - ((p)+1)* 2*PGSIZE)
 
 // User memory layout.
