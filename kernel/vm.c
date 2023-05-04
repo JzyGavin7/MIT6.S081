@@ -47,6 +47,29 @@ kvminit()
   kvmmap(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 }
 
+pagetable_t proc_kvminit(){
+  
+  pagetable_t pktable = uvmcreate();
+  if(pktable == 0) return 0;
+
+  for(int i = 1; i < 512; i++){
+    pktable[i] = kernel_pagetable[i];
+  }
+  // uart registers
+  uvmmap(pktable, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  uvmmap(pktable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // CLINT
+  uvmmap(pktable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+
+  // PLIC
+  uvmmap(pktable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+  return pktable;
+}
+
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
 void
@@ -125,6 +148,14 @@ void
 kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
 {
   if(mappages(kernel_pagetable, va, sz, pa, perm) != 0)
+    panic("kvmmap");
+}
+
+
+void
+uvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  if(mappages(pagetable, va, sz, pa, perm) != 0)
     panic("kvmmap");
 }
 
@@ -294,6 +325,23 @@ freewalk(pagetable_t pagetable)
     }
   }
   kfree((void*)pagetable);
+}
+
+void
+freekptable(pagetable_t pagetable)
+{
+  pte_t pte = pagetable[0];
+  pagetable_t level2 = (pagetable_t) PTE2PA(pte);
+  for(int i = 0; i < 512; i++){
+    pte = level2[i];
+    if(pte & PTE_V){
+      pagetable_t level3 = (pagetable_t)PTE2PA(pte);
+      kfree((void*) level3);
+      level2[i] = 0;
+    }
+  }
+  kfree((void*) level2);
+  kfree((void*) pagetable);
 }
 
 // Free user memory pages,
