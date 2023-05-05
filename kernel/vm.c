@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -52,9 +54,6 @@ pagetable_t proc_kvminit(){
   pagetable_t pktable = uvmcreate();
   if(pktable == 0) return 0;
 
-  for(int i = 1; i < 512; i++){
-    pktable[i] = kernel_pagetable[i];
-  }
   // uart registers
   uvmmap(pktable, UART0, UART0, PGSIZE, PTE_R | PTE_W);
 
@@ -66,6 +65,16 @@ pagetable_t proc_kvminit(){
 
   // PLIC
   uvmmap(pktable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  uvmmap(pktable, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  uvmmap(pktable, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  uvmmap(pktable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 
   return pktable;
 }
@@ -170,7 +179,7 @@ kvmpa(uint64 va)
   pte_t *pte;
   uint64 pa;
   
-  pte = walk(kernel_pagetable, va, 0);
+  pte = walk(myproc()->kpagetable, va, 0);
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
@@ -330,17 +339,29 @@ freewalk(pagetable_t pagetable)
 void
 freekptable(pagetable_t pagetable)
 {
-  pte_t pte = pagetable[0];
-  pagetable_t level2 = (pagetable_t) PTE2PA(pte);
+  // pte_t pte = pagetable[0];
+  // pagetable_t level2 = (pagetable_t) PTE2PA(pte);
+  // for(int i = 0; i < 512; i++){
+  //   pte = level2[i];
+  //   if(pte & PTE_V){
+  //     pagetable_t level3 = (pagetable_t)PTE2PA(pte);
+  //     kfree((void*) level3);
+  //     level2[i] = 0;
+  //   }
+  // }
+  // kfree((void*) level2);
+  // kfree((void*) pagetable);
+
   for(int i = 0; i < 512; i++){
-    pte = level2[i];
+    pte_t pte = pagetable[i];
     if(pte & PTE_V){
-      pagetable_t level3 = (pagetable_t)PTE2PA(pte);
-      kfree((void*) level3);
-      level2[i] = 0;
+      pagetable[i] = 0;
+      if(!(pte & (PTE_R | PTE_W | PTE_X))){
+        pagetable_t next = (pagetable_t) PTE2PA(pte);
+        freekptable(next);
+      }
     }
   }
-  kfree((void*) level2);
   kfree((void*) pagetable);
 }
 

@@ -128,6 +128,13 @@ found:
     return 0;
   }
 
+  char *pa = kalloc();
+  if(pa == 0)
+    panic("kalloc");
+  uint64 va = KSTACK((int) (p - proc));
+  uvmmap(p->kpagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+  p->kstack = va;
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -148,6 +155,12 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  if(p->kstack){
+    pte_t* pte = walk(p->kpagetable, p->kstack, 0);
+    if(!pte) panic("freeproc: walk");
+    kfree((void*) PTE2PA(*pte));
+  }
+  p->kstack = 0;
   if(p->kpagetable)
     freekptable(p->kpagetable);
   p->kpagetable = 0;
