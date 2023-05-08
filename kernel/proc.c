@@ -262,10 +262,10 @@ growproc(int n)
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
 
-  p->sz = sz;
-  
   kumap(p->kpagetable, p->pagetable, sz, p->sz);
 
+  p->sz = sz;
+  
   return 0;
 }
 
