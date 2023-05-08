@@ -240,6 +240,8 @@ userinit(void)
 
   p->state = RUNNABLE;
 
+  kumap(p->kpagetable, p->pagetable, p->sz, 0);
+
   release(&p->lock);
 }
 
@@ -259,7 +261,11 @@ growproc(int n)
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
+
   p->sz = sz;
+  
+  kumap(p->kpagetable, p->pagetable, sz, p->sz);
+
   return 0;
 }
 
@@ -304,6 +310,8 @@ fork(void)
   pid = np->pid;
 
   np->state = RUNNABLE;
+
+  kumap(np->kpagetable, np->pagetable, np->sz, 0);
 
   release(&np->lock);
 

@@ -120,6 +120,24 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
   return &pagetable[PX(0, va)];
 }
 
+void 
+kumap(pagetable_t kpagetable, pagetable_t upagetable, uint64 newsz, uint64 oldsz)
+{
+  
+  if(newsz >= PLIC) panic("kumap: exceed maximum size");
+
+  pte_t *upte, *kpte;
+  
+  for(uint64 va = oldsz; va < newsz; va += PGSIZE){
+    upte = walk(upagetable, va, 0);
+    kpte = walk(kpagetable, va, 1);
+    *kpte = *upte;
+
+    *kpte &= ~(PTE_U|PTE_W|PTE_X);
+  }
+}
+
+
 // Look up a virtual address, return the physical address,
 // or 0 if not mapped.
 // Can only be used to look up user pages.
@@ -436,6 +454,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
+  return copyin_new(pagetable, dst, srcva, len);
   uint64 n, va0, pa0;
 
   while(len > 0){
@@ -462,6 +481,8 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
+  return copyinstr_new(pagetable, dst, srcva, max);
+
   uint64 n, va0, pa0;
   int got_null = 0;
 
