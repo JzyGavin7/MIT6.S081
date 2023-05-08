@@ -181,7 +181,7 @@ uvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)
 
 // translate a kernel virtual address to
 // a physical address. only needed for
-// addresses on the stack.
+// addresses on the stack. (because rest area in kernel is directed mapped)
 // assumes va is page aligned.
 uint64
 kvmpa(uint64 va)
@@ -190,7 +190,7 @@ kvmpa(uint64 va)
   pte_t *pte;
   uint64 pa;
   
-  pte = walk(myproc()->kpagetable, va, 0);
+  pte = walk(kernel_pagetable, va, 0);
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
